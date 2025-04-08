@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter import messagebox
 import random
+import os
+
 class Board:
     bg_color={
         #'2': '#eee4da',
@@ -33,6 +35,20 @@ class Board:
         self.number=4
         self.main_window=Tk()
         self.main_window.title('2048 Game')
+        
+        # Load high score
+        self.high_score = self.load_high_score()
+        
+        # Modified score frame to include restart button
+        self.score_frame = Frame(self.main_window)
+        self.score_frame.grid(row=0, column=0, columnspan=4, pady=5)
+        self.score_label = Label(self.score_frame, text="Score: 0", font=('arial', 20, 'bold'))
+        self.score_label.grid(row=0, column=0, padx=10)
+        self.high_score_label = Label(self.score_frame, text=f"High Score: {self.high_score}", font=('arial', 20, 'bold'))
+        self.high_score_label.grid(row=0, column=1, padx=10)
+        self.restart_button = Button(self.score_frame, text="Restart", font=('arial', 15, 'bold'), command=self.restart_game)
+        self.restart_button.grid(row=0, column=2, padx=10)
+        
         self.gameArea=Frame(self.main_window,bg= 'dark green')
         self.board=[]
         self.grid=[[0]*4 for i in range(4)]
@@ -71,6 +87,17 @@ class Board:
                         self.compress=True
                     count+=1
         self.grid=temp
+    def load_high_score(self):
+        try:
+            with open('high_score.txt', 'r') as file:
+                return int(file.read())
+        except:
+            return 0
+            
+    def save_high_score(self):
+        with open('high_score.txt', 'w') as file:
+            file.write(str(self.high_score))
+
     def mergeGrid(self):
         self.merge=False
         for i in range(4):
@@ -79,6 +106,11 @@ class Board:
                     self.grid[i][j] *= 2
                     self.grid[i][j + 1] = 0
                     self.score += self.grid[i][j]
+                    if self.score > self.high_score:
+                        self.high_score = self.score
+                        self.save_high_score()
+                        self.high_score_label.config(text=f"High Score: {self.high_score}")
+                    self.score_label.config(text=f"Score: {self.score}")
                     self.merge = True
     def random_cell(self):
         cells=[]
@@ -111,11 +143,34 @@ class Board:
                     self.board[i][j].config(text=str(self.grid[i][j]),
                     bg=self.bg_color.get(str(self.grid[i][j])),
                     fg=self.color.get(str(self.grid[i][j])))
+    def restart_game(self):
+        # Reset grid
+        self.grid = [[0]*4 for i in range(4)]
+        self.score = 0
+        self.compress = False
+        self.merge = False
+        self.moved = False
+        
+        # Update score display
+        self.score_label.config(text="Score: 0")
+        
+        # Initialize new game
+        self.random_cell()
+        self.random_cell()
+        self.paintGrid()
 class Game:
     def __init__(self,playpanel):
-        self.playpanel=playpanel
-        self.end=False
-        self.won=False
+        self.playpanel = playpanel
+        self.end = False
+        self.won = False
+        
+        # Add restart method to reset game state
+        self.playpanel.restart_game = lambda: self.restart()
+    
+    def restart(self):
+        self.end = False
+        self.won = False
+        self.playpanel.restart_game()
     def start(self):
         self.playpanel.random_cell()
         self.playpanel.random_cell()
